@@ -20,7 +20,7 @@ import com.google.inject.{ImplementedBy, Inject}
 import org.joda.time.LocalDate
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsResultException
+import play.api.libs.json.{Format, JsResultException, Json}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.tai.connectors.TaxCodeChangeConnector
 import uk.gov.hmrc.tai.model.TaxCodeRecord
@@ -31,6 +31,7 @@ import uk.gov.hmrc.time.TaxYearResolver
 import uk.gov.hmrc.tai.util.DateTimeHelper.dateTimeOrdering
 
 import scala.concurrent.Future
+import scala.util.Try
 
 case class TaxCodeComponent(allowances: Seq[IabdSummary], deductions: Seq[IabdSummary]) {
 
@@ -38,9 +39,17 @@ case class TaxCodeComponent(allowances: Seq[IabdSummary], deductions: Seq[IabdSu
     TaxCodeComponent(this.allowances ++ that.allowances, this.deductions ++ that.deductions)
   }
 }
+object TaxCodeComponent {
+
+  implicit val format: Format[TaxCodeComponent] = Json.format[TaxCodeComponent]
+}
 
 case class TaxCodeComparison(previous: TaxCodeComponent, current: TaxCodeComponent)
 
+object TaxCodeComparison {
+
+  implicit val format: Format[TaxCodeComparison] = Json.format[TaxCodeComparison]
+}
 
 class TaxCodeChangeServiceImpl @Inject()(taxCodeChangeConnector: TaxCodeChangeConnector) extends TaxCodeChangeService {
 
@@ -128,7 +137,7 @@ class TaxCodeChangeServiceImpl @Inject()(taxCodeChangeConnector: TaxCodeChangeCo
         taxAccountDetails => {
           // TODO: Remove get and handle Failure
 
-          val incomeSources = taxAccountDetails.map(_.incomeSources).get
+          val incomeSources: Seq[IncomeSource] = taxAccountDetails.map(_.incomeSources).getOrElse(throw new RuntimeException("test message"))
 
           TaxCodeComponent(incomeSources.flatMap(getIABDSummary(_.allowances)), incomeSources.flatMap(getIABDSummary(_.deductions)))
         }
@@ -168,6 +177,7 @@ trait TaxCodeChangeService {
 
   def taxCodeChange(nino: Nino): Future[TaxCodeChange]
 
+  def iabdComparison(nino: Nino): Future[TaxCodeComparison]
 //  def taxCodeChangeIabdComparison(nino: Nino, taxAccountId: Int): Any //Future[Tuple[Tuple[Iabd, Iabd], Tuple[Iabd, Iabd]]]
 
 }

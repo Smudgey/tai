@@ -59,7 +59,10 @@ class TaxCodeChangeConnector @Inject()(metrics: Metrics,
   def taxAccountHistory(nino: Nino, taxCodeId: Int): Future[Try[TaxAccountDetails]] = {
     val url = urlConfig.taxAccountHistoricSnapshotUrl(nino, taxCodeId)
 
-    getFromDes[JsObject](url, APITypes.TaxAccountHistoryAPI).map(x => Try(x._1.as[TaxAccountDetails]))
+    getFromDes[JsObject](url, APITypes.TaxAccountHistoryAPI).map(x => {
+      println(x)
+      Try(x._1.as[TaxAccountDetails])
+    })
   }
 }
 

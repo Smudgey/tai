@@ -51,4 +51,12 @@ class TaxCodeChangeController @Inject()(authentication: AuthenticationPredicate,
         Ok(Json.toJson(ApiResponse(taxCodeChange, Seq.empty)))
       }
   }
+
+  def blah(nino: Nino): Action[AnyContent] = authentication.async {
+    implicit request =>
+      taxCodeChangeService.iabdComparison(nino) map { taxCodeChange =>
+        Ok(Json.toJson(taxCodeChange))
+      }
+  }
+
 }
