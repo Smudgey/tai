@@ -18,27 +18,70 @@ package uk.gov.hmrc.tai.controllers
 
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.tai.controllers.predicates.AuthenticationPredicate
 import uk.gov.hmrc.tai.model.api.{ApiFormats, ApiResponse}
+import uk.gov.hmrc.tai.model.domain.income.{Incomes, TaxCodeIncome}
+import uk.gov.hmrc.tai.model.domain.{Employment, TaxAccountSummary}
 import uk.gov.hmrc.tai.model.tai.TaxYear
-import uk.gov.hmrc.tai.service.TaxAccountSummaryService
+import uk.gov.hmrc.tai.service.{EmploymentService, IncomeService, TaxAccountSummaryService, TrackingService}
 import uk.gov.hmrc.tai.util.NpsExceptions
+
+import scala.concurrent.Future
+
+sealed trait TaiResponse
+
+sealed trait TaiSuccessResponse extends TaiResponse
+
+case class TaiSuccessResponseWithPayload[T](payload: T) extends TaiSuccessResponse
+
+case class FullTaxSummaryForYearResponse(taxCodeIncome: Seq[TaxCodeIncome],
+                                         employments: Seq[Employment],
+                                         taxAccountSummary: TaxAccountSummary,
+                                         isAnyFormInProgress: Boolean,
+                                         nonTaxCodeIncome: Incomes)
 
 @Singleton
 class TaxAccountSummaryController @Inject()(taxAccountSummaryService: TaxAccountSummaryService,
-                                            authentication: AuthenticationPredicate)
+                                            authentication: AuthenticationPredicate,
+                                            incomeService: IncomeService,
+                                            employmentService: EmploymentService,
+                                            trackingService: TrackingService)
   extends BaseController
-  with ApiFormats
-  with NpsExceptions
-  with ControllerErrorHandler{
+    with ApiFormats
+    with NpsExceptions
+    with ControllerErrorHandler {
 
-  def taxAccountSummaryForYear(nino: Nino, year:TaxYear): Action[AnyContent] = authentication.async { implicit request =>
+  def taxAccountSummaryForYear(nino: Nino, year: TaxYear): Action[AnyContent] = authentication.async { implicit request =>
     taxAccountSummaryService.taxAccountSummary(nino, year) map { taxAccountSummary =>
       Ok(Json.toJson(ApiResponse(taxAccountSummary, Nil)))
     } recoverWith taxAccountErrorHandler
+  }
+
+  def fullTaxSummaryForYear(nino: Nino, year: TaxYear): Action[AnyContent] = authentication.async { implicit request =>
+    taxAccountSummaryService.taxAccountSummary(nino, year) flatMap {
+      taxAccountSummary =>
+        taxAccountSummaryViewModel(nino, taxAccountSummary, year) map {
+          fullResponse =>
+            Ok(Json.toJson(ApiResponse(fullResponse, Nil)))
+        }
+
+    } recoverWith taxAccountErrorHandler
+  }
+
+  private def taxAccountSummaryViewModel(nino: Nino, taxAccountSummary: TaxAccountSummary, year: TaxYear)
+                                        (implicit hc: HeaderCarrier): Future[FullTaxSummaryForYearResponse] = {
+    for {
+      taxCodeIncomes <- incomeService.taxCodeIncomes(nino, year)
+      nonTaxCodeIncome <- incomeService.incomes(nino, year)
+      employments <- employmentService.employments(nino, year)
+      isAnyFormInProgress <- trackingService.isAnyIFormInProgress(nino.nino)
+    } yield {
+      FullTaxSummaryForYearResponse(taxCodeIncomes, employments, taxAccountSummary, isAnyFormInProgress, nonTaxCodeIncome)
+    }
   }
 }

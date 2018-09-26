@@ -18,6 +18,7 @@ package uk.gov.hmrc.tai.model.api
 
 
 import play.api.libs.json._
+import uk.gov.hmrc.tai.controllers.FullTaxSummaryForYearResponse
 import uk.gov.hmrc.tai.model.EmploymentUpdate
 import uk.gov.hmrc.tai.model.domain._
 import uk.gov.hmrc.tai.model.domain.benefits.CompanyCarBenefit
@@ -80,5 +81,7 @@ trait ApiFormats {
   implicit val addressFormat: Format[Address] = Json.format[Address]
 
   implicit val personFormat: Format[Person] = Json.format[Person]
+
+  implicit val fullTaxSummaryForYearResponseFormats: OFormat[FullTaxSummaryForYearResponse] = Json.format[FullTaxSummaryForYearResponse]
 
 }
