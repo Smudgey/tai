@@ -33,7 +33,7 @@ import uk.gov.hmrc.tai.controllers.predicates.AuthenticationPredicate
 import uk.gov.hmrc.tai.mocks.MockAuthenticationPredicate
 import uk.gov.hmrc.tai.model.domain.TaxAccountSummary
 import uk.gov.hmrc.tai.model.tai.TaxYear
-import uk.gov.hmrc.tai.service.TaxAccountSummaryService
+import uk.gov.hmrc.tai.service.{EmploymentService, IncomeService, TaxAccountSummaryService, TrackingService}
 import uk.gov.hmrc.tai.util.NpsExceptions
 
 import scala.concurrent.{Await, Future}
@@ -48,7 +48,12 @@ class TaxAccountSummaryControllerSpec extends PlaySpec
   "taxAccountSummaryForYear" must {
     "return NOT AUTHORISED" when {
       "the user is not logged in" in {
-        val sut = createSUT(mock[TaxAccountSummaryService],notLoggedInAuthenticationPredicate)
+        val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
+        val incomeService: IncomeService = mock[IncomeService]
+        val employmentService: EmploymentService = mock[EmploymentService]
+        val trackingService: TrackingService = mock[TrackingService]
+
+        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService, notLoggedInAuthenticationPredicate)
         val result = sut.taxAccountSummaryForYear(nino, TaxYear().next)(FakeRequest())
         ScalaFutures.whenReady(result.failed) { e =>
           e mustBe a[MissingBearerToken]
@@ -58,10 +63,14 @@ class TaxAccountSummaryControllerSpec extends PlaySpec
     "return the tax summary for the given year" when {
       "tax year is CY+1" in {
         val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
+        val incomeService: IncomeService = mock[IncomeService]
+        val employmentService: EmploymentService = mock[EmploymentService]
+        val trackingService: TrackingService = mock[TrackingService]
+
         when(mockTaxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear().next))(any()))
           .thenReturn(Future.successful(taxAccountSummaryForYearCY1))
 
-        val sut = createSUT(mockTaxAccountSummaryService)
+        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService)
         val result = sut.taxAccountSummaryForYear(nino, TaxYear().next)(FakeRequest())
         status(result) mustBe OK
 
@@ -83,10 +92,15 @@ class TaxAccountSummaryControllerSpec extends PlaySpec
     "return Locked exception" when {
       "nps throws locked exception" in {
         val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
+        val incomeService: IncomeService = mock[IncomeService]
+        val employmentService: EmploymentService = mock[EmploymentService]
+        val trackingService: TrackingService = mock[TrackingService]
+
         when(mockTaxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear()))(any()))
           .thenReturn(Future.failed(new LockedException("Account is locked")))
 
-        val sut = createSUT(mockTaxAccountSummaryService)
+        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService)
+
         val result = sut.taxAccountSummaryForYear(nino, TaxYear())(FakeRequest())
         val ex = the[LockedException] thrownBy Await.result(result, 5.seconds)
         ex.message mustBe "Account is locked"
@@ -100,7 +114,13 @@ class TaxAccountSummaryControllerSpec extends PlaySpec
 
   val taxAccountSummary = TaxAccountSummary(1111,0, 12.34, 0, 0, 0, 0)
   val taxAccountSummaryForYearCY1 = TaxAccountSummary(2222,1, 56.78, 100.00, 43.22, 200, 100)
-  private def createSUT(taxAccountSummaryService: TaxAccountSummaryService, authentication: AuthenticationPredicate =
-  loggedInAuthenticationPredicate) = new TaxAccountSummaryController(taxAccountSummaryService, authentication)
 
+  private def createSUT(
+    taxAccountSummaryService: TaxAccountSummaryService,
+    incomeService: IncomeService,
+    employmentService: EmploymentService,
+    trackingService: TrackingService,
+    authentication: AuthenticationPredicate = loggedInAuthenticationPredicate) =
+      new TaxAccountSummaryController(
+        taxAccountSummaryService, authentication, incomeService, employmentService, trackingService)
 }

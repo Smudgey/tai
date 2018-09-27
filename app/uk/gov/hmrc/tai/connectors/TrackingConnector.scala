@@ -17,19 +17,19 @@
 package uk.gov.hmrc.tai.connectors
 
 import com.google.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment}
 import play.api.Mode.Mode
+import play.api.{Configuration, Environment}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.tai.model.domain.tracking.TrackedForm
 import uk.gov.hmrc.tai.model.domain.tracking.formatter.TrackedFormFormatters
-import uk.gov.hmrc.play.config.ServicesConfig
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.ws.WSHttp
+import scala.concurrent.Future
 
 @Singleton
-class TrackingConnector @Inject()(environment: Environment, wsHttp: WSHttp, conf: Configuration) extends TrackedFormFormatters with ServicesConfig {
+class TrackingConnector @Inject()(environment: Environment, wsHttp: HttpClient, conf: Configuration) extends TrackedFormFormatters with ServicesConfig {
   val serviceUrl: String = baseUrl("tracking")
 
   override protected def mode: Mode = environment.mode
