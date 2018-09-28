@@ -97,11 +97,18 @@ class IabdUrls @Inject()(npsConfig: NpsConfig, desConfig: DesConfig) {
     s"${desIabdUrl(nino, taxYear)}/employment/$iabdType"
 }
 
-  @Singleton
+@Singleton
 class TaxCodeChangeUrl @Inject()(config: DesConfig) {
 
   def taxCodeChangeUrl(nino: Nino, start: TaxYear, end: TaxYear): String = {
     s"${config.baseURL}/individuals/tax-code-history/list/${nino.nino}/${start.year}?endTaxYear=${end.year}"
   }
 
+}
+
+@Singleton
+class TrackingUrl @Inject()(config: TrackingConfig) {
+  def trackingUrl(nino: String): String = {
+    s"${config.baseURL}/tracking-data/user/nino/$nino"
+  }
 }

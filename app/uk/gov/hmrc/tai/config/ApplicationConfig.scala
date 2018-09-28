@@ -94,3 +94,8 @@ class FeatureTogglesConfig @Inject()(val runModeConfiguration: Configuration, pl
   def desUpdateEnabled: Boolean = runModeConfiguration.getBoolean("tai.des.update.call").getOrElse(false)
   def taxCodeChangeEnabled: Boolean = runModeConfiguration.getBoolean("tai.taxCodeChange.enabled").getOrElse(false)
 }
+
+@Singleton
+class TrackingConfig @Inject()(val runModeConfiguration: Configuration, playEnv: Environment) extends BaseConfig(playEnv) {
+  lazy val baseURL: String = baseUrl("tracking")
+}

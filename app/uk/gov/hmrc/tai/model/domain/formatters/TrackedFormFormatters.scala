@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.tai.model.domain.tracking.formatter
+package uk.gov.hmrc.tai.model.domain.formatters
 
 import play.api.Logger
 import play.api.libs.json._

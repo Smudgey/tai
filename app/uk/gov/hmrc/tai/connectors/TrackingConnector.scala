@@ -17,33 +17,19 @@
 package uk.gov.hmrc.tai.connectors
 
 import com.google.inject.{Inject, Singleton}
-import play.api.Mode.Mode
-import play.api.{Configuration, Environment}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.tai.model.domain.formatters.TrackedFormFormatters
 import uk.gov.hmrc.tai.model.domain.tracking.TrackedForm
-import uk.gov.hmrc.tai.model.domain.tracking.formatter.TrackedFormFormatters
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
-class TrackingConnector @Inject()(environment: Environment, wsHttp: HttpClient, conf: Configuration) extends TrackedFormFormatters with ServicesConfig {
-  val serviceUrl: String = baseUrl("tracking")
-
-  override protected def mode: Mode = environment.mode
-
-  override protected def runModeConfiguration: Configuration = conf
-
-  private val IdType = "nino"
-
-  def trackingUrl(id: String) = s"$serviceUrl/tracking-data/user/$IdType/$id"
-
+class TrackingConnector @Inject()(httpClient: HttpClient, urlProvider: TrackingUrl) extends TrackedFormFormatters {
   def getUserTracking(nino: String)(implicit hc: HeaderCarrier): Future[Seq[TrackedForm]] = {
-    wsHttp.doGet(trackingUrl(nino)) map {
+    httpClient.doGet(urlProvider.trackingUrl(nino)) map {
       _.json.as[Seq[TrackedForm]](trackedFormSeqReads)
     }
   }
-
 }

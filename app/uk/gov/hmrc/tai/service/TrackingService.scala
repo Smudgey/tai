@@ -42,8 +42,8 @@ class TrackingService @Inject()(repository: JourneyCacheRepository, trackingConn
 
     for {
       isStatusAvailable <- trackingStatus
-      isAnyJourneySuccessful <- repository.currentCache(TrackSuccessfulJourney_JourneyKey) map (_.nonEmpty)
-    } yield isStatusAvailable || isAnyJourneySuccessful
+      maybeJourney <- repository.currentCache(TrackSuccessfulJourney_JourneyKey)
+    } yield isStatusAvailable || maybeJourney.fold(false)(_.nonEmpty)
   }
 
   def trackingForTesForms(nino: String)(implicit hc: HeaderCarrier): Future[Seq[TrackedForm]] = {

@@ -176,5 +176,14 @@ class ApplicationUrlsSpec extends PlaySpec with MockitoSugar {
     }
   }
 
+  "TrackingUrl" should {
+    "return the correct url" in {
+      val config = mock[TrackingConfig]
+      when(config.baseURL).thenReturn("")
+
+      new TrackingUrl(config).trackingUrl("nino1") mustBe "/tracking-data/user/nino/nino1"
+    }
+  }
+
   private val nino: Nino = new Generator(new Random).nextNino
 }
