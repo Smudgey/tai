@@ -65,7 +65,7 @@ class TaxAccountSummaryController @Inject()(taxAccountSummaryService: TaxAccount
   def fullTaxSummaryForYear(nino: Nino, year: TaxYear): Action[AnyContent] = authentication.async { implicit request =>
     taxAccountSummaryService.taxAccountSummary(nino, year) flatMap {
       taxAccountSummary =>
-        taxAccountSummaryViewModel(nino, taxAccountSummary, year) map {
+        buildTaxAccountSummary(nino, taxAccountSummary, year) map {
           fullResponse =>
             Ok(Json.toJson(ApiResponse(fullResponse, Nil)))
         }
@@ -73,8 +73,8 @@ class TaxAccountSummaryController @Inject()(taxAccountSummaryService: TaxAccount
     } recoverWith taxAccountErrorHandler
   }
 
-  private def taxAccountSummaryViewModel(nino: Nino, taxAccountSummary: TaxAccountSummary, year: TaxYear)
-                                        (implicit hc: HeaderCarrier): Future[FullTaxSummaryForYearResponse] = {
+  private def buildTaxAccountSummary(nino: Nino, taxAccountSummary: TaxAccountSummary, year: TaxYear)
+                                    (implicit hc: HeaderCarrier): Future[FullTaxSummaryForYearResponse] = {
     for {
       taxCodeIncomes <- incomeService.taxCodeIncomes(nino, year)
       nonTaxCodeIncome <- incomeService.incomes(nino, year)

@@ -19,108 +19,138 @@ package uk.gov.hmrc.tai.controllers
 import org.mockito.Matchers
 import org.mockito.Matchers.any
 import org.mockito.Mockito.when
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{status, _}
+import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.MissingBearerToken
-import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.http.logging.SessionId
 import uk.gov.hmrc.tai.controllers.predicates.AuthenticationPredicate
 import uk.gov.hmrc.tai.mocks.MockAuthenticationPredicate
-import uk.gov.hmrc.tai.model.domain.TaxAccountSummary
 import uk.gov.hmrc.tai.model.tai.TaxYear
-import uk.gov.hmrc.tai.service.{EmploymentService, IncomeService, TaxAccountSummaryService, TrackingService}
 import uk.gov.hmrc.tai.util.NpsExceptions
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.Random
+import scala.concurrent.Future
 
 class TaxAccountSummaryControllerSpec extends PlaySpec
-  with MockitoSugar
   with NpsExceptions
-  with MockAuthenticationPredicate{
+  with MockAuthenticationPredicate
+  with TaxAccountSummaryControllerTestData{
+
+  val controller: TaxAccountSummaryController = createController()
+  val notLoggedInController: TaxAccountSummaryController = createController(notLoggedInAuthenticationPredicate)
+
+  private def createController(authentication: AuthenticationPredicate = loggedInAuthenticationPredicate) =
+    new TaxAccountSummaryController(taxAccountSummaryService, authentication, incomeService, employmentService, trackingService)
 
   "taxAccountSummaryForYear" must {
-    "return NOT AUTHORISED" when {
-      "the user is not logged in" in {
-        val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
-        val incomeService: IncomeService = mock[IncomeService]
-        val employmentService: EmploymentService = mock[EmploymentService]
-        val trackingService: TrackingService = mock[TrackingService]
-
-        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService, notLoggedInAuthenticationPredicate)
-        val result = sut.taxAccountSummaryForYear(nino, TaxYear().next)(FakeRequest())
-        ScalaFutures.whenReady(result.failed) { e =>
-          e mustBe a[MissingBearerToken]
-        }
-      }
-    }
     "return the tax summary for the given year" when {
       "tax year is CY+1" in {
-        val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
-        val incomeService: IncomeService = mock[IncomeService]
-        val employmentService: EmploymentService = mock[EmploymentService]
-        val trackingService: TrackingService = mock[TrackingService]
-
-        when(mockTaxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear().next))(any()))
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(taxYear))(any()))
           .thenReturn(Future.successful(taxAccountSummaryForYearCY1))
 
-        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService)
-        val result = sut.taxAccountSummaryForYear(nino, TaxYear().next)(FakeRequest())
-        status(result) mustBe OK
+        val result = controller.taxAccountSummaryForYear(nino, taxYear)(FakeRequest())
 
-        val expectedJson = Json.obj(
-          "data" -> Json.obj(
-            "totalEstimatedTax" -> 2222,
-            "taxFreeAmount" -> 1,
-            "totalInYearAdjustmentIntoCY" -> 56.78,
-            "totalInYearAdjustment" -> 100.00,
-            "totalInYearAdjustmentIntoCYPlusOne" -> 43.22,
-            "totalEstimatedIncome" -> 200,
-            "taxFreeAllowance" -> 100
-          ),
-          "links" -> Json.arr())
-        contentAsJson(result) mustBe expectedJson
+        status(result) mustBe OK
+        contentAsJson(result) mustBe expectedTaxAccountSummaryForYearJson
+      }
+    }
+
+    "return NOT AUTHORISED" when {
+      "the user is not logged in" in {
+        intercept[MissingBearerToken]{
+          await(notLoggedInController.taxAccountSummaryForYear(nino, TaxYear().next)(FakeRequest()))
+        }
       }
     }
 
     "return Locked exception" when {
       "nps throws locked exception" in {
-        val mockTaxAccountSummaryService = mock[TaxAccountSummaryService]
-        val incomeService: IncomeService = mock[IncomeService]
-        val employmentService: EmploymentService = mock[EmploymentService]
-        val trackingService: TrackingService = mock[TrackingService]
-
-        when(mockTaxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear()))(any()))
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear()))(any()))
           .thenReturn(Future.failed(new LockedException("Account is locked")))
 
-        val sut = createSUT(mockTaxAccountSummaryService, incomeService, employmentService, trackingService)
-
-        val result = sut.taxAccountSummaryForYear(nino, TaxYear())(FakeRequest())
-        val ex = the[LockedException] thrownBy Await.result(result, 5.seconds)
-        ex.message mustBe "Account is locked"
+        intercept[LockedException]{
+          await(controller.taxAccountSummaryForYear(nino, TaxYear())(FakeRequest()))
+        }
       }
     }
   }
 
-  val nino = new Generator(new Random).nextNino
+  "fullTaxSummaryForYear" must {
+    "return a fully populated tax summary for the given year" when {
+      "tax year is CY+1 and the user has no tax codes, incomes, employments or live journeys" in {
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(taxYear))(any())).thenReturn(
+          Future.successful(taxAccountSummaryForYearCY1))
+        when(incomeService.taxCodeIncomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful fullyPopulatedTaxCodeIncomes)
+        when(incomeService.incomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful fullyPopulatedIncomes)
+        when(employmentService.employments(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful fullyPopulatedEmployments)
+        when(trackingService.isAnyIFormInProgress(Matchers.eq(nino.nino))(any())).thenReturn(Future successful true)
 
-  private implicit val hc = HeaderCarrier(sessionId = Some(SessionId("TEST")))
+        val result = controller.fullTaxSummaryForYear(nino, taxYear)(FakeRequest())
+        status(result) mustBe OK
 
-  val taxAccountSummary = TaxAccountSummary(1111,0, 12.34, 0, 0, 0, 0)
-  val taxAccountSummaryForYearCY1 = TaxAccountSummary(2222,1, 56.78, 100.00, 43.22, 200, 100)
+        contentAsJson(result) mustBe fullyPopulatedFullTaxSummaryForYearJson
+      }
+    }
 
-  private def createSUT(
-    taxAccountSummaryService: TaxAccountSummaryService,
-    incomeService: IncomeService,
-    employmentService: EmploymentService,
-    trackingService: TrackingService,
-    authentication: AuthenticationPredicate = loggedInAuthenticationPredicate) =
-      new TaxAccountSummaryController(
-        taxAccountSummaryService, authentication, incomeService, employmentService, trackingService)
+    "return a sparsely populated tax summary for the given year" when {
+      "tax year is CY+1 and the user has no tax codes, incomes, employments or live journeys" in {
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(taxYear))(any())).thenReturn(
+          Future.successful(taxAccountSummaryForYearCY1))
+        when(incomeService.taxCodeIncomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful sparselyPopulatedTaxCodeIncomes)
+        when(incomeService.incomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful minimallyPopulatedIncomes)
+        when(employmentService.employments(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful sparselyPopulatedEmployments)
+        when(trackingService.isAnyIFormInProgress(Matchers.eq(nino.nino))(any())).thenReturn(Future successful true)
+
+        val result = controller.fullTaxSummaryForYear(nino, taxYear)(FakeRequest())
+        status(result) mustBe OK
+
+        contentAsJson(result) mustBe sparselyPopulatedFullTaxSummaryForYearJson
+      }
+    }
+
+    "return a minimal tax summary for the given year" when {
+      "tax year is CY+1 and the user has no tax codes, incomes, employments or live journeys" in {
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(taxYear))(any())).thenReturn(
+          Future.successful(taxAccountSummaryForYearCY1))
+        when(incomeService.taxCodeIncomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful Seq.empty)
+        when(incomeService.incomes(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful minimallyPopulatedIncomes)
+        when(employmentService.employments(Matchers.eq(nino), Matchers.eq(taxYear))(any())).thenReturn(
+          Future successful Seq.empty)
+        when(trackingService.isAnyIFormInProgress(Matchers.eq(nino.nino))(any())).thenReturn(Future successful true)
+
+        val result = controller.fullTaxSummaryForYear(nino, taxYear)(FakeRequest())
+        status(result) mustBe OK
+
+        contentAsJson(result) mustBe sminimalyPopulatedFullTaxSummaryForYearJson
+      }
+    }
+
+    "return NOT AUTHORISED" when {
+      "the user is not logged in" in {
+        intercept[MissingBearerToken]{
+          await(notLoggedInController.fullTaxSummaryForYear(nino, TaxYear().next)(FakeRequest()))
+        }
+      }
+    }
+
+    "return Locked exception" when {
+      "nps throws locked exception" in {
+        when(taxAccountSummaryService.taxAccountSummary(Matchers.eq(nino),Matchers.eq(TaxYear()))(any()))
+          .thenReturn(Future.failed(new LockedException("Account is locked")))
+
+        intercept[LockedException]{
+          await(controller.fullTaxSummaryForYear(nino, TaxYear())(FakeRequest()))
+        }
+      }
+    }
+  }
+
 }
