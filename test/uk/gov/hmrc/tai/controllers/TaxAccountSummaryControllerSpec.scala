@@ -129,7 +129,7 @@ class TaxAccountSummaryControllerSpec extends PlaySpec
         val result = controller.fullTaxSummaryForYear(nino, taxYear)(FakeRequest())
         status(result) mustBe OK
 
-        contentAsJson(result) mustBe sminimalyPopulatedFullTaxSummaryForYearJson
+        contentAsJson(result) mustBe minimalyPopulatedFullTaxSummaryForYearJson
       }
     }
 

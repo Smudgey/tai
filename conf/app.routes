@@ -4,8 +4,6 @@ GET  /:nino                                                                     
 
 GET  /:nino/tax-summary/:year                                                                   @uk.gov.hmrc.tai.controllers.TaxSummaryController.getTaxSummaryPartial(nino: Nino, year: Int)
 
-GET  /:nino/tax-summary-full/:year                                                              @uk.gov.hmrc.tai.controllers.TaxSummaryController.getTaxSummary(nino: Nino, year: Int)
-
 POST /:nino/incomes/:year/update                                                                @uk.gov.hmrc.tai.controllers.TaxSummaryController.updateEmployments(nino: Nino, year: Int)
 
 POST /calculator/calculate-estimated-pay                                                        @uk.gov.hmrc.tai.controllers.EstimatedPayCalculatorController.calculateFullYearEstimatedPay()
@@ -51,6 +49,8 @@ GET  /:nino/tax-account/:year/tax-components                                    
 
 #Tax Summary
 GET  /:nino/tax-account/:year/summary                                                                    @uk.gov.hmrc.tai.controllers.TaxAccountSummaryController.taxAccountSummaryForYear(nino: Nino, year: uk.gov.hmrc.tai.model.tai.TaxYear)
+
+GET  /:nino/tax-account/:year/full-summary                                                               @uk.gov.hmrc.tai.controllers.TaxSummaryController.getTaxSummary(nino: Nino, year: Int)
 
 #Total Tax
 GET  /:nino/tax-account/:year/total-tax                                                                  @uk.gov.hmrc.tai.controllers.TotalTaxController.totalTax(nino: Nino, year: uk.gov.hmrc.tai.model.tai.TaxYear)

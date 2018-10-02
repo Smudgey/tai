@@ -141,9 +141,9 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
       receivingOccupationalPension = true)
   )
 
-  val sminimalyPopulatedFullTaxSummaryForYearJson: JsValue =
+  val minimalyPopulatedFullTaxSummaryForYearJson: JsValue =
     parse(
-      """{
+      s"""{
         |  "data": {
         |    "taxCodeIncome": [],
         |    "employments": [],
@@ -172,8 +172,8 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |          "totalInYearAdjustment": 0,
         |          "inYearAdjustmentIntoCYPlusOne": 0,
         |          "iabdUpdateSource": "ManualTelephone",
-        |          "updateNotificationDate": "2018-10-01",
-        |          "updateActionDate": "2018-10-01"
+        |          "updateNotificationDate": "$now",
+        |          "updateActionDate": "$now"
         |        }
         |      ],
         |      "nonTaxCodeIncomes": {
@@ -187,7 +187,7 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
 
   val sparselyPopulatedFullTaxSummaryForYearJson: JsValue =
     parse(
-      """{
+      s"""{
         |  "data": {
         |    "taxCodeIncome": [
         |      {
@@ -206,7 +206,7 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |    "employments": [
         |      {
         |        "name": "name",
-        |        "startDate": "2018-10-01",
+        |        "startDate": "$now",
         |        "annualAccounts": [],
         |        "taxDistrictNumber": "taxDistrictNumber",
         |        "payeNumber": "payeNumber",
@@ -240,8 +240,8 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |          "totalInYearAdjustment": 0,
         |          "inYearAdjustmentIntoCYPlusOne": 0,
         |          "iabdUpdateSource": "ManualTelephone",
-        |          "updateNotificationDate": "2018-10-01",
-        |          "updateActionDate": "2018-10-01"
+        |          "updateNotificationDate": "$now",
+        |          "updateActionDate": "$now"
         |        }
         |      ],
         |      "nonTaxCodeIncomes": {
@@ -255,7 +255,7 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
 
   val fullyPopulatedFullTaxSummaryForYearJson: JsValue =
     parse(
-      """
+      s"""
         |{
         |  "data": {
         |    "taxCodeIncome": [
@@ -272,16 +272,16 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |        "totalInYearAdjustment": 0,
         |        "inYearAdjustmentIntoCYPlusOne": 0,
         |        "iabdUpdateSource": "ManualTelephone",
-        |        "updateNotificationDate": "2018-10-01",
-        |        "updateActionDate": "2018-10-01"
+        |        "updateNotificationDate": "$now",
+        |        "updateActionDate": "$now"
         |      }
         |    ],
         |    "employments": [
         |      {
         |        "name": "name",
         |        "payrollNumber": "payrollNumber",
-        |        "startDate": "2018-10-01",
-        |        "endDate": "2018-10-01",
+        |        "startDate": "$now",
+        |        "endDate": "$now",
         |        "annualAccounts": [
         |          {
         |            "key": "key",
@@ -289,7 +289,7 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |            "realTimeStatus": "Available",
         |            "payments": [
         |              {
-        |                "date": "2018-10-01",
+        |                "date": "$now",
         |                "amountYearToDate": 2000,
         |                "taxAmountYearToDate": 3000,
         |                "nationalInsuranceAmountYearToDate": 4000,
@@ -301,7 +301,7 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |            ],
         |            "endOfTaxYearUpdates": [
         |              {
-        |                "date": "2018-10-01",
+        |                "date": "$now",
         |                "adjustments": [
         |                  {
         |                    "type": "NationalInsuranceAdjustment",
@@ -345,8 +345,8 @@ trait TaxAccountSummaryControllerTestData extends MockitoSugar{
         |          "totalInYearAdjustment": 0,
         |          "inYearAdjustmentIntoCYPlusOne": 0,
         |          "iabdUpdateSource": "ManualTelephone",
-        |          "updateNotificationDate": "2018-10-01",
-        |          "updateActionDate": "2018-10-01"
+        |          "updateNotificationDate": "$now",
+        |          "updateActionDate": "$now"
         |        }
         |      ],
         |      "nonTaxCodeIncomes": {
