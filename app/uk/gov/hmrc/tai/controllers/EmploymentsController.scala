@@ -25,23 +25,26 @@ import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.tai.model.api.{ApiFormats, ApiResponse, EmploymentCollection}
 import uk.gov.hmrc.tai.model.domain.{AddEmployment, Employment, EndEmployment, IncorrectEmployment}
 import uk.gov.hmrc.tai.model.tai.TaxYear
-import uk.gov.hmrc.tai.service.EmploymentService
+import uk.gov.hmrc.tai.service.{EmploymentService, PersonService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.tai.controllers.predicates.AuthenticationPredicate
 
 @Singleton
 class EmploymentsController @Inject()(employmentService: EmploymentService,
-                                      authentication: AuthenticationPredicate)
+                                      authentication: AuthenticationPredicate,
+                                      personService: PersonService)
   extends BaseController
   with ApiFormats {
 
   def employments(nino: Nino, year: TaxYear): Action[AnyContent] = authentication.async { implicit request =>
-    employmentService.employments(nino, year).map { employments: Seq[Employment] =>
-      Ok(Json.toJson(ApiResponse(EmploymentCollection(employments), Nil)))
-    }.recover {
-      case _: NotFoundException => NotFound
-      case ex:BadRequestException => BadRequest(ex.getMessage)
-      case _ => InternalServerError
+    personService.person(nino) {
+      employmentService.employments(nino, year).map { employments: Seq[Employment] =>
+        Ok(Json.toJson(ApiResponse(EmploymentCollection(employments), Nil)))
+      }.recover {
+        case _: NotFoundException => NotFound
+        case ex: BadRequestException => BadRequest(ex.getMessage)
+        case _ => InternalServerError
+      }
     }
   }
 
@@ -94,6 +97,4 @@ class EmploymentsController @Inject()(employmentService: EmploymentService,
           })
       }
   }
-
 }
-

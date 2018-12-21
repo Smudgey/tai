@@ -17,15 +17,25 @@
 package uk.gov.hmrc.tai.service
 
 import com.google.inject.{Inject, Singleton}
+import play.api.mvc.Result
+import play.api.mvc.Results._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.tai.model.domain.Person
 import uk.gov.hmrc.tai.repositories.PersonRepository
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PersonService @Inject()(personRepository: PersonRepository){
+class PersonService @Inject()(personRepository: PersonRepository) {
 
-  def person(nino: Nino)(implicit hc: HeaderCarrier): Future[Person] = personRepository.getPerson(nino)
+  def person(nino: Nino)(proceed: Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    personRepository.getPerson(nino).flatMap { person =>
+      if (person.isDeceased) {
+        Future.successful(Forbidden("DECEASED"))
+      } else if (person.hasCorruptData) {
+        Future.successful(Forbidden("CORRUPT"))
+      } else {
+        proceed
+      }
+    }
 }
